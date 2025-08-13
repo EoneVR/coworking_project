@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import date
-
+from decimal import Decimal
 # Create your models here.
 
 
@@ -13,6 +13,13 @@ class Book(models.Model):
     title = models.CharField(max_length=255, verbose_name='Название')
     description = models.TextField(default='Описание', verbose_name='Описание')
     author = models.CharField(max_length=255, verbose_name='Автор')
+    unit_price = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=1,
+        validators=[MinValueValidator(Decimal("0.01"))],
+        verbose_name='Цена за 1 ед.'
+    )
     year_of_publish = models.PositiveIntegerField(
         validators=[
             MinValueValidator(1000),

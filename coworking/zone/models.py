@@ -53,7 +53,7 @@ class Tariff(models.Model):
     available_for_vip = models.BooleanField(default=True, verbose_name='Доступен для VIP')
 
     def __str__(self):
-        return f"{self.title} — {self.price} ₽"
+        return f"{self.title} — {self.price}"
 
     class Meta:
         verbose_name = 'Тариф'
