@@ -49,7 +49,7 @@ class Book(models.Model):
         verbose_name='Переплёт'
     )
     in_stock = models.PositiveIntegerField(default=0, verbose_name='Кол-во в магазине')
-    category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.PROTECT, verbose_name='Категория')
+    category = models.ForeignKey(Category, on_delete=models.PROTECT, verbose_name='Категория')
 
     def __str__(self):
         return f"{self.title} — {self.author}"
