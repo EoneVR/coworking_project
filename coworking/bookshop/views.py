@@ -4,8 +4,11 @@ from rest_framework import permissions
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from .models import Category, Book, Cart, CartItem
-from .serializers import CategorySerializer, BookSerializer, CartSerializer, CartItemSerializer
+from .serializers import CategorySerializer, BookSerializer, CartSerializer, CartItemSerializer, \
+    OrderSerializer, OrderItemSerializer
 from .permissions import CustomPermission
+from .services.orders import OrderService
+from .services.payments import PaymentService
 
 
 # Create your views here.
@@ -42,8 +45,8 @@ class CategoryView(viewsets.ViewSet):
         return Response({'message': 'Категория удалена'}, status=204)
 
     @action(detail=True, methods=['get'], url_path='books')
-    def get_book_by_category(self, request, category_id):
-        book = Book.objects.filter(category_id=category_id)
+    def get_book_by_category(self, request, pk=None):
+        book = Book.objects.filter(category_id=pk)
         if not book.exists():
             return Response({'message': 'В данной категории книг нет'}, status=204)
         serializer = BookSerializer(book, many=True)
@@ -103,4 +106,61 @@ class CartView(viewsets.ViewSet):
         serializer = CartSerializer(cart)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['post'])
+    def add_to_cart(self, request):
+        cart = self._get_cart(request.user)
+        book_id = request.data.get('book_id')
+        quantity = int(request.data.get('quantity', 1))
 
+        if quantity <= 0:
+            return Response({'error': 'Количество должно быть больше 0'}, status=400)
+
+        book = get_object_or_404(Book, id=book_id)
+
+        cart_item, created = CartItem.objects.get_or_create(cart=cart, book=book)
+        if not created:
+            cart_item.quantity += quantity
+        else:
+            cart_item.quantity = quantity
+        cart_item.save()
+
+        return Response(CartItemSerializer(cart_item).data, status=201)
+
+    @action(detail=False, methods=['post'])
+    def remove_from_cart(self, request):
+        cart = self._get_cart(request.user)
+        book_id = request.data.get('book_id')
+
+        if not book_id:
+            return Response({'error': 'Книга не найдена'}, status=400)
+
+        cart_item = CartItem.objects.filter(cart=cart, book_id=book_id).first()
+        if not cart_item:
+            return Response({'error': 'Товар не найден в корзине'}, status=404)
+
+        cart_item.delete()
+        return Response({'message': 'Товар удален из корзины'}, status=200)
+
+    @action(detail=False, methods=['post'])
+    def clear_cart(self, request):
+        cart = self._get_cart(request.user)
+        cart.items.all().delete()
+        return Response({'message': 'Корзина очищена'}, status=200)
+
+
+class OrderViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request):
+        """Оформление заказа"""
+        try:
+            order = OrderService.create_order_from_cart(request.user, request.data.get("cart_id"))
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=400)
+
+        session = PaymentService.create_checkout_session(order)
+        serializer = OrderSerializer(order)
+        return Response(
+            {"order": serializer.data, "checkout_url": session.url},
+            status=201,
+        )

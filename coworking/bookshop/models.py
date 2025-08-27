@@ -63,9 +63,14 @@ class Book(models.Model):
 class Cart(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
     created_at = models.DateTimeField(auto_now_add=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name='Пользователь', related_name='cart')
 
     def __str__(self):
         return f"Корзина {self.id} от {self.created_at:%Y-%m-%d}"
+
+    @property
+    def total_price(self):
+        return sum(item.total_price for item in self.items.all())
 
     class Meta:
         verbose_name = 'Корзина'
@@ -76,6 +81,10 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, verbose_name='Корзина', related_name='items')
     book = models.ForeignKey(Book, on_delete=models.CASCADE, verbose_name='Книга')
     quantity = models.PositiveIntegerField(verbose_name='Кол-во книг')
+
+    @property
+    def total_price(self):
+        return self.book.unit_price * self.quantity
 
     class Meta:
         verbose_name = 'Книга в корзине'
