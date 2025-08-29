@@ -1,7 +1,6 @@
 import stripe
 from django.conf import settings
 
-
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
@@ -26,3 +25,4 @@ class PaymentService:
             cancel_url="http://localhost:8000/cancel",
         )
         return session
+

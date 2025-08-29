@@ -20,14 +20,20 @@ class CartItemSerializer(serializers.ModelSerializer):
     book_id = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all(), source="book", write_only=True)
     total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
 
+    def get_total_price(self, obj):
+        return obj.total_pric
+
     class Meta:
         model = CartItem
-        fields = ['id', 'book', 'quantity', 'total_price']
+        fields = ['id', 'book', 'book_id', 'quantity', 'total_price']
 
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
     total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
+    def get_total_price(self, obj):
+        return obj.total_price
 
     class Meta:
         model = Cart

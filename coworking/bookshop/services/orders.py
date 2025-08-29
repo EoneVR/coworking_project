@@ -6,11 +6,11 @@ from ..models import Order, OrderItem, Cart
 class OrderService:
     @staticmethod
     def create_order_from_cart(user, cart_id):
-        cart = get_object_or_404(Cart, id=cart_id, customer=user)
+        cart = get_object_or_404(Cart, id=cart_id, user=user)
         if not cart.items.exists():
             raise ValueError("Корзина пуста")
         with transaction.atomic():
-            order = Order.objects.create(user=user)
+            order = Order.objects.create(customer=user)
 
             order_items = [
                 OrderItem(
