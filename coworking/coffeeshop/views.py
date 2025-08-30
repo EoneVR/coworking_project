@@ -4,6 +4,8 @@ from rest_framework import permissions
 from django.shortcuts import get_object_or_404
 from .serializers import *
 from .models import *
+from ..bookshop.permissions import CustomPermission
+from ..bookshop.views import StandardPagination
 
 
 # Create your views here.
@@ -49,7 +51,8 @@ class PromotionView(viewsets.ViewSet):
 
 
 class CoffeeView(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [CustomPermission]
+    pagination_class = StandardPagination
 
     def list(self, request):
         queryset = Coffee.objects.all()
@@ -89,7 +92,8 @@ class CoffeeView(viewsets.ViewSet):
 
 
 class BakeryView(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [CustomPermission]
+    pagination_class = StandardPagination
 
     def list(self, request):
         queryset = Bakery.objects.all()

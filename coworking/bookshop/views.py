@@ -4,14 +4,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from django.core.cache import cache
-from django.http import HttpResponse
-import time
 from .models import Category, Book, Cart, CartItem
-from .serializers import CategorySerializer, BookSerializer, CartSerializer, CartItemSerializer, \
-    OrderSerializer, OrderItemSerializer
+from .serializers import CategorySerializer, BookSerializer, CartSerializer, CartItemSerializer, OrderSerializer
 from .permissions import CustomPermission
 from .services.orders import OrderService
 from .services.payments import PaymentService
+
 
 # Create your views here.
 
@@ -27,22 +25,35 @@ class CategoryView(viewsets.ViewSet):
     pagination_class = StandardPagination
 
     def list(self, request):
-        queryset = Category.objects.all()
-        paginator = self.pagination_class()
-        paginated_qs = paginator.paginate_queryset(queryset, request)
-        serializer = CategorySerializer(paginated_qs, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        cache_key = 'categories:list'
+        data = cache.get(cache_key)
+        if not data:
+            queryset = Category.objects.all()
+            paginator = self.pagination_class()
+            paginated_qs = paginator.paginate_queryset(queryset, request)
+            serializer = CategorySerializer(paginated_qs, many=True)
+            data = paginator.get_paginated_response(serializer.data).data
+            cache.set(cache_key, data, 60 * 5)
+        return Response(data)
 
     def retrieve(self, request, pk=None):
-        queryset = Category.objects.all()
-        category = get_object_or_404(queryset, pk=pk)
-        serializer = CategorySerializer(category)
-        return Response(serializer.data)
+        cache_key = f"categories:{pk}"
+        data = cache.get(cache_key)
+
+        if not data:
+            queryset = Category.objects.all()
+            category = get_object_or_404(queryset, pk=pk)
+            serializer = CategorySerializer(category)
+            data = serializer.data
+            cache.set(cache_key, data, 60 * 5)
+
+        return Response(data)
 
     def create(self, request):
         serializer = CategorySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        cache.delete("categories:list")  # сброс кэша списка
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk=None):
@@ -50,22 +61,34 @@ class CategoryView(viewsets.ViewSet):
         serializer = CategorySerializer(category, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        cache.delete(f"category:{pk}")  # сброс кэша конкретной категории
+        cache.delete("categories:list")  # сброс кэша списка
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
         category = get_object_or_404(Category, pk=pk)
         category.delete()
+        cache.delete(f"category:{pk}")
+        cache.delete("categories:list")
         return Response({'message': 'Категория удалена'}, status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['get'], url_path='books')
     def get_book_by_category(self, request, pk=None):
-        book = Book.objects.filter(category_id=pk)
-        if not book.exists():
-            return Response({'message': 'В данной категории книг нет'}, status=status.HTTP_204_NO_CONTENT)
-        paginator = self.pagination_class()
-        paginated_qs = paginator.paginate_queryset(book, request)
-        serializer = BookSerializer(paginated_qs, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        cache_key = f"category:{pk}:books"
+        data = cache.get(cache_key)
+
+        if not data:
+            books = Book.objects.filter(category_id=pk)
+            if not books.exists():
+                return Response({'message': 'В данной категории книг нет'}, status=status.HTTP_204_NO_CONTENT)
+
+            paginator = self.pagination_class()
+            paginated_qs = paginator.paginate_queryset(books, request)
+            serializer = BookSerializer(paginated_qs, many=True)
+            data = paginator.get_paginated_response(serializer.data).data
+            cache.set(cache_key, data, 60 * 5)
+
+        return Response(data)
 
 
 class BookView(viewsets.ViewSet):
