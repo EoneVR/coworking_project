@@ -6,7 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.core.cache import cache
 from .models import Category, Book, Cart, CartItem
 from .serializers import CategorySerializer, BookSerializer, CartSerializer, CartItemSerializer, OrderSerializer
-from .permissions import CustomPermission
+from .permissions import BookshopPermission
 from .services.orders import OrderService
 from .services.payments import PaymentService
 
@@ -21,7 +21,7 @@ class StandardPagination(PageNumberPagination):
 
 
 class CategoryView(viewsets.ViewSet):
-    permission_classes = [CustomPermission]
+    permission_classes = [BookshopPermission]
     pagination_class = StandardPagination
 
     def list(self, request):
@@ -39,14 +39,12 @@ class CategoryView(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         cache_key = f"categories:{pk}"
         data = cache.get(cache_key)
-
         if not data:
             queryset = Category.objects.all()
             category = get_object_or_404(queryset, pk=pk)
             serializer = CategorySerializer(category)
             data = serializer.data
             cache.set(cache_key, data, 60 * 5)
-
         return Response(data)
 
     def create(self, request):
@@ -61,20 +59,20 @@ class CategoryView(viewsets.ViewSet):
         serializer = CategorySerializer(category, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        cache.delete(f"category:{pk}")  # сброс кэша конкретной категории
+        cache.delete(f"categories:{pk}")  # сброс кэша конкретной категории
         cache.delete("categories:list")  # сброс кэша списка
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
         category = get_object_or_404(Category, pk=pk)
         category.delete()
-        cache.delete(f"category:{pk}")
+        cache.delete(f"categories:{pk}")
         cache.delete("categories:list")
         return Response({'message': 'Категория удалена'}, status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['get'], url_path='books')
     def get_book_by_category(self, request, pk=None):
-        cache_key = f"category:{pk}:books"
+        cache_key = f"categories:{pk}:books"
         data = cache.get(cache_key)
 
         if not data:
@@ -92,26 +90,37 @@ class CategoryView(viewsets.ViewSet):
 
 
 class BookView(viewsets.ViewSet):
-    permission_classes = [CustomPermission]
+    permission_classes = [BookshopPermission]
     pagination_class = StandardPagination
 
     def list(self, request):
-        queryset = Book.objects.all()
-        paginator = self.pagination_class()
-        paginated_qs = paginator.paginate_queryset(queryset, request)
-        serializer = BookSerializer(paginated_qs, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        cache_key = 'books:list'
+        data = cache.get(cache_key)
+        if not data:
+            queryset = Book.objects.all()
+            paginator = self.pagination_class()
+            paginated_qs = paginator.paginate_queryset(queryset, request)
+            serializer = BookSerializer(paginated_qs, many=True)
+            data = paginator.get_paginated_response(serializer.data).data
+            cache.set(cache_key, data, 60 * 5)
+        return Response(data)
 
     def retrieve(self, request, pk=None):
-        queryset = Book.objects.all()
-        book = get_object_or_404(queryset, pk=pk)
-        serializer = BookSerializer(book)
-        return Response(serializer.data)
+        cache_key = f'books:{pk}'
+        data = cache.get(cache_key)
+        if not data:
+            queryset = Book.objects.all()
+            book = get_object_or_404(queryset, pk=pk)
+            serializer = BookSerializer(book)
+            data = serializer.data
+            cache.set(cache_key, data, 60 * 5)
+        return Response(data)
 
     def create(self, request):
         serializer = BookSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        cache.delete('books:list')
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk=None):
@@ -119,6 +128,8 @@ class BookView(viewsets.ViewSet):
         serializer = BookSerializer(book, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        cache.delete(f'books:{pk}')
+        cache.delete('books:list')
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def partial_update(self, request, pk=None):
@@ -126,11 +137,15 @@ class BookView(viewsets.ViewSet):
         serializer = BookSerializer(book, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        cache.delete(f'books:{pk}')
+        cache.delete('books:list')
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
         book = get_object_or_404(Book, pk=pk)
         book.delete()
+        cache.delete(f'books:{pk}')
+        cache.delete('books:list')
         return Response({"message": "Книга удалена"}, status=status.HTTP_204_NO_CONTENT)
 
 
