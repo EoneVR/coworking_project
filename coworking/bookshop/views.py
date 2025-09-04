@@ -9,7 +9,7 @@ from .serializers import CategorySerializer, BookSerializer, CartSerializer, Car
 from .permissions import BookshopPermission
 from .services.orders import OrderService
 from .services.payments import PaymentService
-
+from .tasks import send_order_confirmation
 
 # Create your views here.
 
@@ -210,6 +210,7 @@ class OrderViewSet(viewsets.ViewSet):
     def create(self, request):
         try:
             order = OrderService.create_order_from_cart(request.user, request.data.get("cart_id"))
+            send_order_confirmation.delay(order.id)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

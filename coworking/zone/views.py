@@ -5,7 +5,7 @@ from .models import *
 from .serializers import RoomSerializer, TariffSerializer, SubscriptionSerializer, UserSubscriptionSerializer, \
     BookingSerializer
 from .permissions import CoworkingPermission
-
+from .tasks import send_booking_confirmation
 
 # Create your views here.
 
@@ -107,4 +107,5 @@ class BookingView(BaseCRUDViewSet):
 
     def perform_create(self, serializer):
         # serializer.create() сам использует request.user из context, но на всякий случай:
-        serializer.save()
+        booking = serializer.save()
+        send_booking_confirmation.delay(booking.id)

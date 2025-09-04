@@ -12,9 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from celery.schedules import crontab
 import os
-
-PSQL_PATH = r"C:\Program Files\PostgreSQL\17\bin\psql.exe"
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -167,7 +166,7 @@ SPECTACULAR_SETTINGS = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": "redis://redis:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -175,4 +174,15 @@ CACHES = {
 }
 
 CELERY_BROKER_URL = "redis://redis:6379/0"
-CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/1"
+
+CELERY_BEAT_SCHEDULE = {
+    "clear-old-carts-daily": {
+        "task": "payments.tasks.clear_old_carts",
+        "schedule": crontab(hour=5, minute=0),
+    },
+    "check-expired-subscriptions-daily": {
+        "task": "coworking.tasks.check_expired_subscriptions",
+        "schedule": crontab(hour=5, minute=0),
+    },
+}
