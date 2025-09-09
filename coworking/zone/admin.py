@@ -19,7 +19,7 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
     def is_active_display(self, obj):
         return obj.is_active
     is_active_display.short_description = "Активна"
-    is_active_display.boolean = True  # галочка в админке
+    is_active_display.boolean = True
 
 
 @admin.register(Tariff)

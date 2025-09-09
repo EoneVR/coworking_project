@@ -14,7 +14,6 @@ def test_promotion_serializer():
     assert serializer.data["description"] == "Зимняя скидка"
     assert serializer.data["discount"] == 20.0
 
-    # Тест десериализации
     data = {"description": "Весенняя акция", "discount": 15.0}
     serializer = PromotionSerializer(data=data)
     assert serializer.is_valid()
@@ -38,10 +37,9 @@ def test_coffee_serializer():
     serializer = CoffeeSerializer(coffee)
     assert serializer.data["title"] == "Latte"
     assert serializer.data["size"] == "250ml"
-    assert serializer.data["unit_price"] == 3.50  # Decimal сериализуется в строку
+    assert serializer.data["unit_price"] == 3.50
     assert promo.id in serializer.data["promotion"]
 
-    # Тест десериализации
     data = {
         "title": "Cappuccino",
         "size": "200ml",
@@ -75,7 +73,6 @@ def test_bakery_serializer():
     assert serializer.data["unit_price"] == 2.50
     assert promo.id in serializer.data["promotion"]
 
-    # Тест десериализации
     data = {
         "title": "Donut",
         "ingredients": "Мука, сахар, глазурь",

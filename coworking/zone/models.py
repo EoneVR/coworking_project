@@ -2,7 +2,8 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 from datetime import timedelta
-from django.utils.timezone import timezone, now
+from django.utils import timezone
+from django.utils.timezone import now
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
@@ -29,9 +30,6 @@ class Room(models.Model):
         return f"{self.title} ({self.get_room_type_display()})"
 
     def is_available(self, start_time, end_time, exclude_booking_id=None):
-        """
-        Проверяет, свободна ли комната в интервале [start_time, end_time).
-        """
         qs = Booking.objects.filter(
             room=self,
             start_time__lt=end_time,
@@ -134,6 +132,8 @@ class Booking(models.Model):
     def __str__(self):
         return f"{self.user} → {self.room} [{self.start_time:%d.%m %H:%M}]"
 
+    MAX_HOURS = 12
+
     def clean(self):
         now_dt = timezone.now()
         # 1) не разрешаем бронь в прошлом
@@ -166,7 +166,6 @@ class Booking(models.Model):
                 raise ValidationError("Привязанная подписка не активна")
 
     def calculate_price(self):
-        # duration с точностью до 0.01 часа
         duration_hours = (self.end_time - self.start_time).total_seconds() / 3600
         duration_hours = Decimal(duration_hours).quantize(Decimal("0.01"))
 
@@ -174,7 +173,6 @@ class Booking(models.Model):
         if self.subscription and self.subscription.is_active:
             return Decimal("0.00")
 
-        # найти тариф для типа комнаты
         tariff = Tariff.objects.filter(room_type=self.room.room_type).first()
         if not tariff:
             raise ValidationError(f"Не найден тариф для типа комнаты: {self.room.room_type}")
@@ -182,7 +180,6 @@ class Booking(models.Model):
         return (tariff.price_per_hour * duration_hours).quantize(Decimal("0.01"))
 
     def save(self, *args, **kwargs):
-        # запускает clean() и затем считает цену
         self.full_clean()
         self.price = self.calculate_price()
         super().save(*args, **kwargs)

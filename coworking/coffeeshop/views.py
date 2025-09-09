@@ -187,7 +187,7 @@ class BakeryView(viewsets.ViewSet):
         cache.delete('bakery:list')
         return Response({'message': 'Позиция удалена'}, status=204)
 
-#
+
 # class BaseCRUDViewSet(viewsets.ModelViewSet):
 #     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 #

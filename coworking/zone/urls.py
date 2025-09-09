@@ -6,7 +6,7 @@ router = DefaultRouter()
 router.register(r'rooms', RoomView, basename='rooms')
 router.register(r'tariffs', TariffView, basename='tariffs')
 router.register(r'subscriptions', SubscriptionView, basename='subscriptions')
-router.register(r'usersubscriptions', UserSubscriptionView, basename='usersubscriptions')
+router.register(r'user-subscriptions', UserSubscriptionView, basename='user-subscriptions')
 router.register(r'bookings', BookingView, basename='bookings')
 
 

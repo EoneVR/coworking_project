@@ -41,10 +41,11 @@ INSTALLED_APPS = [
     'zone',
     'coffeeshop',
     'bookshop',
+    'analytics',
     'rest_framework',
     'djoser',
     'drf_spectacular',
-    # 'django-filters'
+    'django-filters'
 ]
 
 MIDDLEWARE = [
@@ -152,7 +153,10 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=7)
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,  # при обновлении refresh-токен меняется на новый
+    'BLACKLIST_AFTER_ROTATION': True  # старый refresh-токен становится недействительным
 }
 
 SPECTACULAR_SETTINGS = {
@@ -160,7 +164,6 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Lounge zone with coffeehouse, bookshop and coworking',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
-    # OTHER SETTINGS
 }
 
 CACHES = {

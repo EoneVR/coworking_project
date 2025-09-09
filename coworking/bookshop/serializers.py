@@ -17,11 +17,11 @@ class BookSerializer(serializers.ModelSerializer):
 
 class CartItemSerializer(serializers.ModelSerializer):
     book = BookSerializer(read_only=True)
-    book_id = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all(), source="book", write_only=True)
-    total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    book_id = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all(), source="book")
+    total_price = serializers.SerializerMethodField()
 
     def get_total_price(self, obj):
-        return obj.total_pric
+        return obj.total_price
 
     class Meta:
         model = CartItem

@@ -3,6 +3,8 @@ from rest_framework import permissions, viewsets, status
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 from django.core.cache import cache
 from .models import Category, Book, Cart, CartItem
 from .serializers import CategorySerializer, BookSerializer, CartSerializer, CartItemSerializer, OrderSerializer
@@ -10,6 +12,7 @@ from .permissions import BookshopPermission
 from .services.orders import OrderService
 from .services.payments import PaymentService
 from .tasks import send_order_confirmation
+
 
 # Create your views here.
 
@@ -28,7 +31,7 @@ class CategoryView(viewsets.ViewSet):
         cache_key = 'categories:list'
         data = cache.get(cache_key)
         if not data:
-            queryset = Category.objects.all()
+            queryset = Category.objects.all().order_by('id')
             paginator = self.pagination_class()
             paginated_qs = paginator.paginate_queryset(queryset, request)
             serializer = CategorySerializer(paginated_qs, many=True)
@@ -92,12 +95,28 @@ class CategoryView(viewsets.ViewSet):
 class BookView(viewsets.ViewSet):
     permission_classes = [BookshopPermission]
     pagination_class = StandardPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['category', 'author', 'unit_price', 'year_of_publish', 'in_stock']
+    search_fields = ['title', 'author__name', 'description']
+    ordering_fields = ['unit_price', 'year_of_publish', 'title']
+    ordering = ['title']
+
+    def get_queryset(self):
+        return Book.objects.all()
+
+    def filter_queryset(self, request, queryset):
+        for backend in list(self.filter_backends):
+            queryset = backend().filter_queryset(request, queryset, self)
+        return queryset
 
     def list(self, request):
-        cache_key = 'books:list'
+        cache_key = f"books:list:{request.get_full_path()}"
         data = cache.get(cache_key)
+
         if not data:
-            queryset = Book.objects.all()
+            queryset = self.get_queryset()
+            queryset = self.filter_queryset(request, queryset)
+
             paginator = self.pagination_class()
             paginated_qs = paginator.paginate_queryset(queryset, request)
             serializer = BookSerializer(paginated_qs, many=True)
@@ -109,7 +128,7 @@ class BookView(viewsets.ViewSet):
         cache_key = f'books:{pk}'
         data = cache.get(cache_key)
         if not data:
-            queryset = Book.objects.all()
+            queryset = self.get_queryset()
             book = get_object_or_404(queryset, pk=pk)
             serializer = BookSerializer(book)
             data = serializer.data
@@ -173,12 +192,14 @@ class CartView(viewsets.ViewSet):
 
         book = get_object_or_404(Book, id=book_id)
 
-        cart_item, created = CartItem.objects.get_or_create(cart=cart, book=book)
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            book=book,
+            defaults={"quantity": quantity}
+        )
         if not created:
             cart_item.quantity += quantity
-        else:
-            cart_item.quantity = quantity
-        cart_item.save()
+            cart_item.save()
 
         return Response(CartItemSerializer(cart_item).data, status=status.HTTP_201_CREATED)
 

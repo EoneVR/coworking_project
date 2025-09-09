@@ -9,9 +9,10 @@ from .tasks import send_booking_confirmation
 
 # Create your views here.
 
+
 class BaseCRUDViewSet(viewsets.ModelViewSet):
     permission_classes = [CoworkingPermission]
-    cache_timeout = 60 * 5  # 5 минут
+    cache_timeout = 60 * 5
 
     def list(self, request, *args, **kwargs):
         user_id = request.user.id if request.user.is_authenticated else "anon"
@@ -54,7 +55,6 @@ class BaseCRUDViewSet(viewsets.ModelViewSet):
         return response
 
     def _clear_cache(self):
-        """Чистим кеш списка и деталей"""
         cache.delete(f"{self.__class__.__name__}:list")
         keys = cache.keys(f"{self.__class__.__name__}:detail:*")
         for key in keys:
@@ -62,7 +62,7 @@ class BaseCRUDViewSet(viewsets.ModelViewSet):
 
 
 class RoomView(BaseCRUDViewSet):
-    queryset = Room.objects.all()
+    queryset = Room.objects.all().order_by('id')
     serializer_class = RoomSerializer
 
 
@@ -77,35 +77,33 @@ class SubscriptionView(BaseCRUDViewSet):
 
 
 class UserSubscriptionView(BaseCRUDViewSet):
-    queryset = UserSubscription.objects.all()
+    queryset = UserSubscription.objects.all().order_by('id')
     serializer_class = UserSubscriptionSerializer
 
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
-            return UserSubscription.objects.all()
+            return UserSubscription.objects.all().order_by('id')
         if user.is_authenticated:
             return UserSubscription.objects.filter(user=user)
         return UserSubscription.objects.none()
 
     def perform_create(self, serializer):
-        # пользователь — текущий user
         serializer.save(user=self.request.user)
 
 
 class BookingView(BaseCRUDViewSet):
-    queryset = Booking.objects.all()
+    queryset = Booking.objects.all().order_by('id')
     serializer_class = BookingSerializer
 
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
-            return Booking.objects.all()
+            return Booking.objects.all().order_by('id')
         if user.is_authenticated:
             return Booking.objects.filter(user=user)
         return Booking.objects.none()
 
     def perform_create(self, serializer):
-        # serializer.create() сам использует request.user из context, но на всякий случай:
         booking = serializer.save()
         send_booking_confirmation.delay(booking.id)
