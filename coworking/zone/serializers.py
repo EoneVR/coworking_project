@@ -5,7 +5,7 @@ from .models import *
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
-        fields = ['id', 'title', 'room_type', 'capacity', 'description']
+        fields = ['id', 'title', 'room_type', 'capacity', 'description', 'image']
 
 
 class TariffSerializer(serializers.ModelSerializer):
@@ -17,11 +17,11 @@ class TariffSerializer(serializers.ModelSerializer):
 class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
-        fields = ['id', 'title', 'duration', 'price']
+        fields = ['id', 'title', 'duration', 'price', 'image']
 
 
 class UserSubscriptionSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(read_only=True)  # user ставим из request
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
     is_active = serializers.SerializerMethodField()
 
     class Meta:

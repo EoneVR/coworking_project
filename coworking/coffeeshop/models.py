@@ -37,6 +37,11 @@ class Coffee(models.Model):
         blank=True,
         related_name="coffees"
     )
+    image = models.ImageField(
+        upload_to='coffee_images/',
+        null=True, blank=True,
+        verbose_name='Фото'
+    )
 
     def __str__(self):
         return f"{self.title} ({self.size})"
@@ -66,7 +71,11 @@ class Bakery(models.Model):
         default=0,
         verbose_name='Кол-во в магазине'
     )
-
+    image = models.ImageField(
+        upload_to='bakery_images/',
+        null=True, blank=True,
+        verbose_name='Фото'
+    )
     def __str__(self):
         return f"{self.title} ({self.in_stock} шт.)"
 

@@ -25,7 +25,11 @@ class Room(models.Model):
     )
     capacity = models.PositiveIntegerField(verbose_name='Вместимость')
     description = models.TextField(blank=True, verbose_name='Описание')
-
+    image = models.ImageField(
+        upload_to='room_images/',
+        null=True, blank=True,
+        verbose_name='Фото'
+    )
     def __str__(self):
         return f"{self.title} ({self.get_room_type_display()})"
 
@@ -70,7 +74,11 @@ class Subscription(models.Model):
     title = models.CharField(max_length=100)
     duration = models.CharField(max_length=20, choices=Duration.choices)
     price = models.DecimalField(max_digits=8, decimal_places=2)
-
+    image = models.ImageField(
+        upload_to='subscription_images/',
+        null=True, blank=True,
+        verbose_name='Фото'
+    )
     def get_end_date(self, start_date):
         if self.duration == self.Duration.WEEK:
             return start_date + timedelta(weeks=1)

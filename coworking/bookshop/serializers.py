@@ -12,7 +12,7 @@ class BookSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = ['id', 'title', 'description', 'author', 'unit_price', 'year_of_publish',
-                  'pages', 'binding', 'in_stock', 'category']
+                  'pages', 'binding', 'in_stock', 'category', 'image']
 
 
 class CartItemSerializer(serializers.ModelSerializer):

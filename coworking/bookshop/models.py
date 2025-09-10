@@ -50,6 +50,11 @@ class Book(models.Model):
     )
     in_stock = models.PositiveIntegerField(default=0, verbose_name='Кол-во в магазине')
     category = models.ForeignKey(Category, on_delete=models.PROTECT, verbose_name='Категория')
+    image = models.ImageField(
+        upload_to='book_images/',
+        null=True, blank=True,
+        verbose_name='Фото'
+    )
 
     def __str__(self):
         return f"{self.title} — {self.author}"

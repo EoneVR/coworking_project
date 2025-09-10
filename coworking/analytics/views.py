@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from coworking.bookshop.models import Order, OrderItem
-from coworking.zone.models import Tariff, Subscription, UserSubscription, Booking
+from bookshop.models import Order, OrderItem
+from zone.models import Tariff, Subscription, UserSubscription, Booking
 from django.db.models import Sum, F, DecimalField, Count, DurationField, ExpressionWrapper
 from django.utils.dateparse import parse_date
 from django.db.models.functions import TruncMonth
