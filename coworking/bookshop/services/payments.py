@@ -22,8 +22,8 @@ class PaymentService:
                 }
             ],
             mode="payment",
-            success_url="http://localhost:8000/success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url="http://localhost:8000/cancel",
+            success_url="http://localhost:8080/cart",
+            cancel_url="http://localhost:8080/",
         )
         check_payment_status.apply_async((order.id, session.id), countdown=300)
         return session

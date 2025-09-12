@@ -2,51 +2,77 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from bookshop.models import Order, OrderItem
 from zone.models import Tariff, Subscription, UserSubscription, Booking
-from django.db.models import Sum, F, DecimalField, Count, DurationField, ExpressionWrapper
+from django.db.models import Sum, F, DecimalField, Count, DurationField, ExpressionWrapper, Avg
 from django.utils.dateparse import parse_date
 from django.db.models.functions import TruncMonth
+
+PaymentStatus = Order.PaymentStatus
 
 
 # Create your views here.
 
 
 class AnalyticsBookshopView(viewsets.ViewSet):
-    permissions = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAdminUser]
 
     def list(self, request):
-        start_date = parse_date(request.query_params.get('start_date'))
-        end_date = parse_date(request.query_params.get('end_date'))
-        report_type = request.query_params.get('report_type', 'revenue')
+        start_date_str = request.query_params.get("start_date")
+        end_date_str = request.query_params.get("end_date")
+        report_type = request.query_params.get("report_type")
 
-        queryset = OrderItem.objects.filter(order_payment_status=PaymentStatus.COMPLETE)
+        start_date = parse_date(start_date_str) if start_date_str else None
+        end_date = parse_date(end_date_str) if end_date_str else None
 
-        if start_date and end_date:
-            queryset = queryset.filter(order_placed_at__range=[start_date, end_date])
-
-        if report_type == 'revenue':
-            data = queryset.aaggregate(total_revenue=Sum(F("quantity") * F("unit_price"), output_field=DecimalField()))
-
-        elif report_type == 'orders_count':
-            count_orders = queryset.values('order').distinct().count()
-            data = {'orders_count': count_orders}
-
-        elif report_type == 'top_books':
-            data = (queryset.values("book__title").annotate(total_sold=Sum("quantity")).order_by("-total_sold")[:5])
-
-        elif report_type == 'avg_check':
-            revenue = queryset.aaggregate(
-                total=Sum(F("quantity") * F("unit_price"), output_field=DecimalField()))['total'] or 0
-            count_orders = queryset.values('order').distinct().count() or 1
-            data = {'average_check': round(revenue / count_orders, 2)}
-
-        elif report_type == 'monthly_sales':
-            data = (
-                queryset.annotate(month=TruncMonth("order__placed_at")).values("month").annotate(
-                    revenue=Sum(F("quantity") * F("unit_price"), output_field=DecimalField()),
-                    orders_count=Count("order", distinct=True), ).order_by("month")
+        if not start_date or not end_date:
+            return Response(
+                {"error": "Укажите даты в формате YYYY-MM-DD"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
+
+        queryset = OrderItem.objects.filter(
+            order__placed_at__date__range=[start_date, end_date],
+            order__payment_status=Order.PaymentStatus.COMPLETE,
+        )
+
+        if report_type == "revenue":
+            data = queryset.aggregate(
+                total_revenue=Sum(F("quantity") * F("unit_price"), output_field=DecimalField())
+            )
+
+        elif report_type == "orders_count":
+            count_orders = queryset.values("order").distinct().count()
+            data = {"orders_count": count_orders}
+
+        elif report_type == "top_books":
+            data = (
+                queryset.values("book__title")
+                .annotate(total_sold=Sum("quantity"))
+                .order_by("-total_sold")[:5]
+            )
+
+        elif report_type == "avg_check":
+            revenue = (
+                    queryset.aggregate(
+                        total=Sum(F("quantity") * F("unit_price"), output_field=DecimalField())
+                    )["total"]
+                    or 0
+            )
+            count_orders = queryset.values("order").distinct().count() or 1
+            data = {"average_check": round(revenue / count_orders, 2)}
+
+        elif report_type == "monthly_sales":
+            data = (
+                queryset.annotate(month=TruncMonth("order__placed_at"))
+                .values("month")
+                .annotate(
+                    revenue=Sum(F("quantity") * F("unit_price"), output_field=DecimalField()),
+                    orders_count=Count("order", distinct=True),
+                )
+                .order_by("month")
+            )
+
         else:
-            return Response({'error': 'Не верный тип отчета'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Неверный тип отчёта"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(data)
 
@@ -94,7 +120,7 @@ class AnalyticsCoworkingView(viewsets.ViewSet):
 
         elif report_type == "avg_duration":
             duration = ExpressionWrapper(F("end_time") - F("start_time"), output_field=DurationField())
-            data = queryset.annotate(duration=duration).aggregate(avg_duration=Sum("duration") / Count("id"))
+            data = queryset.annotate(duration=duration).aggregate(avg_duration=Avg("duration"))
 
         elif report_type == "monthly_stats":
             data = (

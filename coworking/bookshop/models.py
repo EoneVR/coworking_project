@@ -130,3 +130,14 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = 'Книга в заказе'
         verbose_name_plural = 'Книги в заказах'
+
+
+class DeliveryAddress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    country = models.CharField(max_length=255)
+    address = models.CharField(max_length=255)
+    city = models.CharField(max_length=255)
+    state = models.CharField(max_length=255)
+    zipcode = models.CharField(max_length=255)
+    phone = models.CharField(max_length=255)
+    order_notes = models.CharField(max_length=255)

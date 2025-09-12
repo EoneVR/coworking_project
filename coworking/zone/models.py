@@ -7,6 +7,7 @@ from django.utils.timezone import now
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
+
 # Create your models here.
 
 
@@ -30,6 +31,7 @@ class Room(models.Model):
         null=True, blank=True,
         verbose_name='Фото'
     )
+
     def __str__(self):
         return f"{self.title} ({self.get_room_type_display()})"
 
@@ -79,6 +81,7 @@ class Subscription(models.Model):
         null=True, blank=True,
         verbose_name='Фото'
     )
+
     def get_end_date(self, start_date):
         if self.duration == self.Duration.WEEK:
             return start_date + timedelta(weeks=1)

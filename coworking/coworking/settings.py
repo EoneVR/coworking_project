@@ -45,10 +45,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'djoser',
     'drf_spectacular',
-    'django_filters'
+    'django_filters',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -152,7 +154,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'AUTH_HEADER_TYPES': ('JWT',),
+    'AUTH_HEADER_TYPES': ('Bearer',),
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,  # при обновлении refresh-токен меняется на новый
@@ -181,7 +183,7 @@ CELERY_RESULT_BACKEND = "redis://redis:6379/1"
 
 CELERY_BEAT_SCHEDULE = {
     "clear-old-carts-daily": {
-        "task": "payments.tasks.clear_old_carts",
+        "task": "coworking.payments.tasks.clear_old_carts",
         "schedule": crontab(hour=5, minute=0),
     },
     "check-expired-subscriptions-daily": {
@@ -189,3 +191,7 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=5, minute=0),
     },
 }
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8080'
+]

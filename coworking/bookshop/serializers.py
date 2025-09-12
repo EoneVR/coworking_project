@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Book, Cart, CartItem, Order, OrderItem
+from .models import Category, Book, Cart, CartItem, Order, OrderItem, DeliveryAddress
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -63,3 +63,9 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ['id', 'customer', 'placed_at', 'payment_status', 'items', 'total_price']
         read_only_fields = ['customer', 'placed_at', 'payment_status']
+
+
+class DeliveryAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeliveryAddress
+        fields = ['id', 'user', 'country', 'address', 'city', 'state', 'zipcode', 'phone', 'order_notes']

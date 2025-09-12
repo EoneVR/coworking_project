@@ -6,8 +6,9 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.core.cache import cache
-from .models import Category, Book, Cart, CartItem
-from .serializers import CategorySerializer, BookSerializer, CartSerializer, CartItemSerializer, OrderSerializer
+from .models import Category, Book, Cart, CartItem, DeliveryAddress
+from .serializers import CategorySerializer, BookSerializer, CartSerializer, CartItemSerializer, OrderSerializer, \
+    DeliveryAddressSerializer
 from .permissions import BookshopPermission
 from .services.orders import OrderService
 from .services.payments import PaymentService
@@ -198,7 +199,7 @@ class CartView(viewsets.ViewSet):
             defaults={"quantity": quantity}
         )
         if not created:
-            cart_item.quantity += quantity
+            cart_item.quantity = quantity
             cart_item.save()
 
         return Response(CartItemSerializer(cart_item).data, status=status.HTTP_201_CREATED)
@@ -241,3 +242,30 @@ class OrderViewSet(viewsets.ViewSet):
             {"order": serializer.data, "checkout_url": session.url},
             status=status.HTTP_201_CREATED,
         )
+
+
+class DeliveryAddressView(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request):
+        queryset = DeliveryAddress.objects.filter(user=request.user).order_by('id')
+        serializer = DeliveryAddressSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        serializer = DeliveryAddressSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, pk=None):
+        address = get_object_or_404(DeliveryAddress, pk=pk, user=request.user)
+        serializer = DeliveryAddressSerializer(address, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
+    def destroy(self, request, pk=None):
+        address = get_object_or_404(DeliveryAddress, pk=pk, user=request.user)
+        address.delete()
+        return Response({'message': 'Адрес удален'}, status=status.HTTP_204_NO_CONTENT)

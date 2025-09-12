@@ -1,4 +1,5 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.core.cache import cache
 from .models import *
@@ -6,8 +7,11 @@ from .serializers import RoomSerializer, TariffSerializer, SubscriptionSerialize
     BookingSerializer
 from .permissions import CoworkingPermission
 from .tasks import send_booking_confirmation
+import stripe
+from django.conf import settings
 
 # Create your views here.
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 class BaseCRUDViewSet(viewsets.ModelViewSet):
@@ -75,6 +79,36 @@ class SubscriptionView(BaseCRUDViewSet):
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
 
+    @action(detail=True, methods=["post"])
+    def checkout(self, request, pk=None):
+        subscription = self.get_object()
+
+        # создаём Checkout Session
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            mode='payment',
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': subscription.title,
+                        },
+                        'unit_amount': int(subscription.price * 100),
+                    },
+                    'quantity': 1,
+                }
+            ],
+            metadata={
+                "user_id": request.user.id,
+                "subscription_id": subscription.id
+            },
+            success_url='http://localhost:8080/profile',
+            cancel_url="http://localhost:8080/",
+        )
+
+        return Response({"checkout_url": session.url})
+
 
 class UserSubscriptionView(BaseCRUDViewSet):
     queryset = UserSubscription.objects.all().order_by('id')
@@ -107,3 +141,49 @@ class BookingView(BaseCRUDViewSet):
     def perform_create(self, serializer):
         booking = serializer.save()
         send_booking_confirmation.delay(booking.id)
+
+    @action(detail=False, methods=["post"])
+    def checkout(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Создаём бронь в памяти (но пока не сохраняем в БД)
+        booking = Booking(
+            user=request.user,
+            room=serializer.validated_data["room"],
+            start_time=serializer.validated_data["start_time"],
+            end_time=serializer.validated_data["end_time"],
+            subscription=serializer.validated_data.get("subscription"),
+        )
+        booking.full_clean()
+        price = booking.calculate_price()
+
+        # Если подписка → сохраняем бронь сразу без оплаты
+        if price == 0:
+            booking.price = 0
+            booking.save()
+            send_booking_confirmation.delay(booking.id)
+            return Response({"message": "Бронирование бесплатно по подписке"}, status=status.HTTP_201_CREATED)
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="payment",
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": f"Бронирование: {booking.room.title}"},
+                    "unit_amount": int(price * 100),
+                },
+                "quantity": 1,
+            }],
+            metadata={
+                "user_id": request.user.id,
+                "room_id": booking.room.id,
+                "start_time": booking.start_time.isoformat(),
+                "end_time": booking.end_time.isoformat(),
+            },
+            success_url="http://localhost:8080/profile",
+            cancel_url="http://localhost:8080/",
+        )
+
+        return Response({"checkout_url": session.url})
