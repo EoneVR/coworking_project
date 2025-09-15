@@ -176,6 +176,7 @@ class Booking(models.Model):
             if not self.subscription.is_active:
                 raise ValidationError("Привязанная подписка не активна")
 
+
     def calculate_price(self):
         duration_hours = (self.end_time - self.start_time).total_seconds() / 3600
         duration_hours = Decimal(duration_hours).quantize(Decimal("0.01"))

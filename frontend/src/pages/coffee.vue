@@ -8,7 +8,7 @@
       <div v-for="item in coffeeItems" :key="item.id" class="card">
         <img
           v-if="item.image"
-          :src="item.image"
+          :src="`http://localhost:8000${item.image}`"
           alt="coffee"
           class="card-img"
         />

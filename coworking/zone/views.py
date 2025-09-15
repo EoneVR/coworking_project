@@ -66,16 +66,79 @@ class BaseCRUDViewSet(viewsets.ModelViewSet):
 
 
 class RoomView(BaseCRUDViewSet):
+    """
+    API для управления комнатами коворкинга.
+
+    list:
+    Получить список всех комнат.
+
+    retrieve:
+    Получить данные конкретной комнаты по ID.
+
+    create:
+    Добавить новую комнату (для сотрудников).
+
+    update:
+    Полностью обновить данные комнаты.
+
+    partial_update:
+    Частично обновить данные комнаты.
+
+    destroy:
+    Удалить комнату.
+    """
     queryset = Room.objects.all().order_by('id')
     serializer_class = RoomSerializer
 
 
 class TariffView(BaseCRUDViewSet):
+    """
+    API для тарифов.
+
+    list:
+    Получить список тарифов.
+
+    retrieve:
+    Получить данные тарифа по ID.
+
+    create:
+    Добавить новый тариф.
+
+    update:
+    Полностью обновить тариф.
+
+    partial_update:
+    Частично обновить тариф.
+
+    destroy:
+    Удалить тариф.
+    """
     queryset = Tariff.objects.all()
     serializer_class = TariffSerializer
 
 
 class SubscriptionView(BaseCRUDViewSet):
+    """
+    API для подписок.
+
+    list:
+    Получить список подписок.
+
+    retrieve:
+    Получить подписку по ID.
+
+    create:
+    Создать новую подписку.
+
+    update:
+    Обновить подписку.
+
+    partial_update:
+    Частично обновить подписку.
+
+    destroy:
+    Удалить подписку.
+    """
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
 
@@ -83,7 +146,6 @@ class SubscriptionView(BaseCRUDViewSet):
     def checkout(self, request, pk=None):
         subscription = self.get_object()
 
-        # создаём Checkout Session
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             mode='payment',
@@ -111,12 +173,33 @@ class SubscriptionView(BaseCRUDViewSet):
 
 
 class UserSubscriptionView(BaseCRUDViewSet):
+    """
+    API для пользовательских подписок.
+
+    list:
+    Получить список подписок пользователя (или всех для администратора).
+
+    retrieve:
+    Получить конкретную подписку пользователя.
+
+    create:
+    Добавить подписку текущему пользователю.
+
+    update:
+    Обновить подписку пользователя.
+
+    partial_update:
+    Частично обновить подписку.
+
+    destroy:
+    Удалить подписку.
+    """
     queryset = UserSubscription.objects.all().order_by('id')
     serializer_class = UserSubscriptionSerializer
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff:
+        if user.is_superuser or user.is_staff:
             return UserSubscription.objects.all().order_by('id')
         if user.is_authenticated:
             return UserSubscription.objects.filter(user=user)
@@ -127,18 +210,43 @@ class UserSubscriptionView(BaseCRUDViewSet):
 
 
 class BookingView(BaseCRUDViewSet):
+    """
+    API для бронирований.
+
+    list:
+    Получить список бронирований (для пользователя или всех — если админ).
+
+    retrieve:
+    Получить данные конкретного бронирования.
+
+    create:
+    Создать новое бронирование.
+
+    update:
+    Обновить бронирование.
+
+    partial_update:
+    Частично обновить бронирование.
+
+    destroy:
+    Удалить бронирование.
+    """
     queryset = Booking.objects.all().order_by('id')
     serializer_class = BookingSerializer
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff:
+        if user.is_superuser or user.is_staff:
             return Booking.objects.all().order_by('id')
         if user.is_authenticated:
             return Booking.objects.filter(user=user)
         return Booking.objects.none()
 
     def perform_create(self, serializer):
+        """
+        При создании бронирования запускается Celery-задача
+        для отправки email с подтверждением.
+        """
         booking = serializer.save()
         send_booking_confirmation.delay(booking.id)
 
@@ -155,6 +263,15 @@ class BookingView(BaseCRUDViewSet):
             end_time=serializer.validated_data["end_time"],
             subscription=serializer.validated_data.get("subscription"),
         )
+        if not booking.subscription:
+            active_sub = UserSubscription.objects.filter(
+                user=request.user,
+                start_date__lte=timezone.now().date(),
+                end_date__gte=timezone.now().date()
+            ).first()
+            if active_sub:
+                booking.subscription = active_sub
+
         booking.full_clean()
         price = booking.calculate_price()
 

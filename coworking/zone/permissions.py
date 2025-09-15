@@ -9,6 +9,8 @@ class CoworkingPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.user and request.user.is_staff:
             return True
+        if not request.user or not request.user.is_authenticated:
+            return request.method in permissions.SAFE_METHODS
         if request.method in permissions.SAFE_METHODS:
             return True
         if request.method == "POST" and view.__class__.__name__ == "BookingView":

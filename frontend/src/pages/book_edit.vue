@@ -57,7 +57,7 @@ export default {
 methods: {
 async updateBook() {
   try {
-    await axios.put(
+    await axios.patch(
       `http://localhost:8000/books/books/${this.book.id}/`,
       this.book,
       {

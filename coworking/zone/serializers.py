@@ -23,10 +23,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 class UserSubscriptionSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     is_active = serializers.SerializerMethodField()
+    subscription = SubscriptionSerializer(read_only=True)
 
     class Meta:
         model = UserSubscription
-        fields = ['id', 'user', 'subscription', 'start_date', 'is_active']
+        fields = ['id', 'user', 'subscription', 'start_date', 'end_date', 'is_active']
         read_only_fields = ['end_date', 'is_active']
 
     def get_is_active(self, obj):
@@ -58,6 +59,8 @@ class UserSubscriptionSerializer(serializers.ModelSerializer):
 class BookingSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    room = RoomSerializer(read_only=True)
+    subscription = UserSubscriptionSerializer(read_only=True)
 
     class Meta:
         model = Booking

@@ -9,15 +9,23 @@
     <section class="cards">
       <div 
         v-for="book in filteredBooks" 
-        :key="book.id" 
+        :key="book.id"
         class="card"
       >
+        <!-- Картинка -->
+        <img 
+          v-if="book.image" 
+          :src="`http://localhost:8000${book.image}`" 
+          alt="book cover" 
+          class="card-img"
+        />
+
         <h2>{{ book.title }}</h2>
         <p><strong>Автор:</strong> {{ book.author }}</p>
         <p><strong>Цена:</strong> {{ book.unit_price }} ₽</p>
 
         <div class="card-buttons">
-          <router-link to="/cart" class="btn">В корзину</router-link>
+          <button class="btn" @click="addToCart(book)">В корзину</button>
           <router-link :to="`/shop/books/${book.id}`" class="btn secondary">Подробнее</router-link>
         </div>
       </div>
@@ -55,6 +63,26 @@ export default {
     "$route.query.category"(newVal) {
       this.categoryId = newVal || null;
     }
+  },
+  methods: {
+    async addToCart(book) {
+      try {
+        await axios.post("http://localhost:8000/books/carts/add_to_cart/", {
+          book_id: book.id,
+          quantity: 1
+        }, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`
+          }
+        });
+
+        alert("Книга добавлена в корзину!");
+        this.$emit("cart-updated");
+      } catch (error) {
+        console.error("Ошибка при добавлении:", error);
+        alert("Ошибка при добавлении в корзину");
+      }
+    }
   }
 }
 </script>
@@ -87,6 +115,14 @@ export default {
 
 .card h2 {
   margin-bottom: 0.5rem;
+}
+
+.card-img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 1rem;
 }
 
 .card-buttons {

@@ -88,8 +88,9 @@ export default {
 
         // После успешной регистрации — сразу входим
         await this.login();
-      } catch (err) {
-        this.error = "Ошибка регистрации";
+  } catch (err) {
+    console.error("Ошибка регистрации:", err.response?.data);
+    this.error = JSON.stringify(err.response?.data);
       }
     },
   },

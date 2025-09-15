@@ -1,7 +1,7 @@
 from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import Cart, Order
+from .models import Book, Cart, Order
 from django.utils.timezone import now, timedelta
 import stripe
 
@@ -31,11 +31,22 @@ def check_payment_status(order_id, session_id):
 
     if session.payment_status == 'paid':
         order.payment_status = Order.PaymentStatus.COMPLETE
+        order.save()
+
+        for item in order.items.select_related('book'):
+            if item.book.in_stock >= item.quantity:
+                item.book.in_stock -= item.quantity
+                item.book.save()
+            else:
+                raise ValueError(
+                    f"Недостаточно книг '{item.book.title}' на складе"
+                )
     elif session.payment_status == 'unpaid':
         order.payment_status = Order.PaymentStatus.PENDING
+        order.save()
     else:
         order.payment_status = Order.PaymentStatus.FAILED
-    order.save()
+        order.save()
 
 
 @shared_task

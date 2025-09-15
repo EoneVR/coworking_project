@@ -6,7 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.core.cache import cache
-from .models import Category, Book, Cart, CartItem, DeliveryAddress
+from .models import Category, Book, Cart, CartItem, Order, DeliveryAddress
 from .serializers import CategorySerializer, BookSerializer, CartSerializer, CartItemSerializer, OrderSerializer, \
     DeliveryAddressSerializer
 from .permissions import BookshopPermission
@@ -25,6 +25,27 @@ class StandardPagination(PageNumberPagination):
 
 
 class CategoryView(viewsets.ViewSet):
+    """
+    API для категорий книг.
+
+    list:
+    Возвращает список всех категорий.
+
+    retrieve:
+    Получает категорию по ID.
+
+    create:
+    Создаёт новую категорию.
+
+    update:
+    Полностью обновляет данные категории.
+
+    destroy:
+    Удаляет категорию.
+
+    get_book_by_category:
+    Возвращает список книг в указанной категории.
+    """
     permission_classes = [BookshopPermission]
     pagination_class = StandardPagination
 
@@ -94,6 +115,27 @@ class CategoryView(viewsets.ViewSet):
 
 
 class BookView(viewsets.ViewSet):
+    """
+    API для книг.
+
+    list:
+    Возвращает список всех книг с поддержкой поиска, фильтрации и сортировки.
+
+    retrieve:
+    Получает информацию о книге по ID.
+
+    create:
+    Создаёт новую книгу.
+
+    update:
+    Полностью обновляет данные книги.
+
+    partial_update:
+    Частично обновляет данные книги (например, количество на складе).
+
+    destroy:
+    Удаляет книгу.
+    """
     permission_classes = [BookshopPermission]
     pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -170,6 +212,21 @@ class BookView(viewsets.ViewSet):
 
 
 class CartView(viewsets.ViewSet):
+    """
+    API для корзины.
+
+    my_cart:
+    Возвращает корзину текущего пользователя.
+
+    add_to_cart:
+    Добавляет книгу в корзину или обновляет количество.
+
+    remove_from_cart:
+    Удаляет книгу из корзины.
+
+    clear_cart:
+    Полностью очищает корзину.
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def _get_cart(self, user):
@@ -227,7 +284,21 @@ class CartView(viewsets.ViewSet):
 
 
 class OrderViewSet(viewsets.ViewSet):
+    """
+    API для заказов.
+
+    list:
+    Возвращает список заказов текущего пользователя.
+
+    create:
+    Создаёт заказ из корзины и инициирует процесс оплаты.
+    """
     permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request):
+        orders = Order.objects.filter(customer=request.user)
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
 
     def create(self, request):
         try:
@@ -245,6 +316,21 @@ class OrderViewSet(viewsets.ViewSet):
 
 
 class DeliveryAddressView(viewsets.ViewSet):
+    """
+    API для адресов доставки.
+
+    list:
+    Возвращает список адресов текущего пользователя.
+
+    create:
+    Добавляет новый адрес доставки.
+
+    partial_update:
+    Частично обновляет существующий адрес.
+
+    destroy:
+    Удаляет адрес доставки.
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def list(self, request):

@@ -12,6 +12,27 @@ from bookshop.views import StandardPagination
 # Create your views here.
 
 class PromotionView(viewsets.ViewSet):
+    """
+    API для акций и скидок.
+
+    list:
+    Возвращает список всех акций (кэшируется на 5 минут).
+
+    retrieve:
+    Получает информацию об акции по её ID.
+
+    create:
+    Создаёт новую акцию. Доступно только администратору.
+
+    update:
+    Полностью обновляет данные акции.
+
+    partial_update:
+    Частично обновляет данные акции.
+
+    destroy:
+    Удаляет акцию по ID.
+    """
     permission_classes = [permissions.IsAdminUser]
 
     def list(self, request):
@@ -69,6 +90,27 @@ class PromotionView(viewsets.ViewSet):
 
 
 class CoffeeView(viewsets.ViewSet):
+    """
+    API для кофейных напитков.
+
+    list:
+    Возвращает список всех напитков с пагинацией (кэшируется на 5 минут).
+
+    retrieve:
+    Получает напиток по ID.
+
+    create:
+    Создаёт новый напиток. Доступно только сотрудникам с правами.
+
+    update:
+    Полностью обновляет данные напитка.
+
+    partial_update:
+    Частично обновляет данные напитка.
+
+    destroy:
+    Удаляет напиток по ID.
+    """
     permission_classes = [BookshopPermission]
     pagination_class = StandardPagination
 
@@ -129,6 +171,27 @@ class CoffeeView(viewsets.ViewSet):
 
 
 class BakeryView(viewsets.ViewSet):
+    """
+    API для выпечки.
+
+    list:
+    Возвращает список всей выпечки с пагинацией (кэшируется на 5 минут).
+
+    retrieve:
+    Получает выпечку по ID.
+
+    create:
+    Добавляет новую выпечку. Доступно только сотрудникам с правами.
+
+    update:
+    Полностью обновляет данные выпечки.
+
+    partial_update:
+    Частично обновляет данные выпечки.
+
+    destroy:
+    Удаляет выпечку по ID.
+    """
     permission_classes = [BookshopPermission]
     pagination_class = StandardPagination
 
@@ -186,20 +249,3 @@ class BakeryView(viewsets.ViewSet):
         cache.delete(f'bakery:{pk}')
         cache.delete('bakery:list')
         return Response({'message': 'Позиция удалена'}, status=204)
-
-
-# class BaseCRUDViewSet(viewsets.ModelViewSet):
-#     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-#
-# class PromotionView(BaseCRUDViewSet):
-#     queryset = Promotion.objects.all()
-#     serializer_class = PromotionSerializer
-#     permission_classes = [permissions.IsAdminUser]
-#
-# class CoffeeView(BaseCRUDViewSet):
-#     queryset = Coffee.objects.all()
-#     serializer_class = CoffeeSerializer
-#
-# class BakeryView(BaseCRUDViewSet):
-#     queryset = Bakery.objects.all()
-#     serializer_class = BakerySerializer

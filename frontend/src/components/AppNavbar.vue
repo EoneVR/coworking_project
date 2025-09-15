@@ -32,7 +32,7 @@ export default {
   data() {
     return {
       isAuthenticated: !!localStorage.getItem("access_token"), // сразу проверка токена
-      isAdmin: false, // можешь доработать, если у тебя роли есть в токене
+      isAdmin: true, // можешь доработать, если у тебя роли есть в токене
       cartCount: 0,
     };
   },
